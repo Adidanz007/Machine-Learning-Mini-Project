@@ -1,0 +1,75 @@
+"""8. Write a program to implement the k-Nearest Neighbor algorithm to classify the iris data
+set and display both correct and wrong predictions."""
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.preprocessing import StandardScaler
+
+
+iris = load_iris()
+X = pd.DataFrame(iris.data, columns=iris.feature_names)
+y = pd.Series(iris.target, name='species')
+target_names = iris.target_names
+print("Iris Dataset Overview:")
+print(f"Dataset shape: {X.shape}")
+print(f"Target classes: {target_names}")
+print("\nFirst 5 rows of features:")
+print(X.head())
+print("\nTarget distribution:")
+print(y.value_counts())
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+k = 5
+knn = KNeighborsClassifier(n_neighbors=k)
+knn.fit(X_train_scaled, y_train)
+y_pred = knn.predict(X_test_scaled)
+y_pred_proba = knn.predict_proba(X_test_scaled)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"\nAccuracy with k={k}: {accuracy:.4f}")
+y_test_series = pd.Series(y_test, index=y_test.index)
+y_pred_series = pd.Series(y_pred, index=y_test.index)
+results = pd.DataFrame({
+'Actual': y_test_series.values,
+'Actual_Species': y_test_series.map({0: 'setosa', 1: 'versicolor', 2: 'virginica'}),
+'Predicted': y_pred_series.values,
+'Predicted_Species': y_pred_series.map({0: 'setosa', 1: 'versicolor', 2: 'virginica'})
+})
+
+
+for i, species in enumerate(target_names):
+  results[f'P({species})'] = y_pred_proba[:, i]
+results['Correct'] = results['Actual'] == results['Predicted']
+print("\n" + "="*80)
+print("PREDICTION RESULTS")
+print("="*80)
+print("\nCORRECT PREDICTIONS:")
+correct_predictions = results[results['Correct'] == True]
+print(f"Number of correct predictions: {len(correct_predictions)}/{len(results)}")
+print(correct_predictions.head(10))
+print("\n\nWRONG PREDICTIONS:")
+wrong_predictions = results[results['Correct'] == False]
+print(f"Number of wrong predictions: {len(wrong_predictions)}/{len(results)}")
+if len(wrong_predictions) > 0:
+  print(wrong_predictions)
+else:
+  print("No wrong predictions!")
+
+
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(8, 6))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+xticklabels=target_names,
+yticklabels=target_names)
+plt.title('Confusion Matrix')
+print(f"Overall accuracy: {accuracy:.4f}")
